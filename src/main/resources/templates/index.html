@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml"
+      xmlns:th="http://www.thymeleaf.org"
+      xmlns:sec="http://www.thymeleaf.org/thymeleaf-extras-springsecurity4">
+<head>
+    <meta charset="UTF-8">
+    <title>index</title>
+    <script type="text/javascript" src="http://192.168.11.145:30000/static/jquery-3.4.1.js"></script>
+    <script type="text/javascript" src="http://192.168.11.145:30000/static/jquery.cookie.js"></script>
+    <script>
+        $(function () {
+            //1、获取当前面的地址
+            var currentPage=window.location.href;
+            //2、填充a标签中的href中的值
+            //prop ：对于HTML元素本身就带有的固有属性，在处理时，使用prop方法
+            //attr : 对于HTML元素我们自己自定义的DOM属性，在处理时，使用attr方法
+            $("#turn_login_page").prop("href","http://127.0.0.1:8082/turnLoginPage?currentPage="+currentPage);
+            // 如果用户访问index页面的时候已经登录过了，需要处理么？必须要处理
+            // 验证用户是否处于登录状态(从登录项目中获取当前的登录状态)
+            // cookie中存入了redis的key，cookie是存在客户端的硬盘中，也就是说需要从cookie中获取redis的key，再把redis的key发送到登录项目中进行验证
+            // 3.获取客户端的cookie值
+            // 存入cookie数据的时候setCookie(key, value);
+            // 接收到的其实是cookie的value值--->redis的key-->redis的value是用户信息
+            var redisKey = $.cookie("COOKIE_KEY");
+            // 4.判断cookie是否存在
+            // 和java不一样，在js中如果判断是否为null，无论是什么类型都可以使用以下方式(true:说明不为null，false:说明为null)
+            if (!redisKey){
+                return;
+            }
+
+            //5、cookie中的key值为空，则跳转到登录页面上进行登录
+            $.ajax({
+               type:"get",
+               url:"http://127.0.0.1:8082/token/"+redisKey,
+               dataType:"jsonp",//使用jsonp支持跨域
+                success:function (data) {//data的值就是从redis中查询的userString
+                   //规定：只要从登录页面上查询的值不为空就说明登录成功
+                    if (null != data){
+                        // 说明用户登录成功
+                        // 规定data所传递的值就是user对象(返回的值一定是一个String类型)，获取到username
+                        // "id:1,username:zhangsan,age:20,password:123456"这是个String类型
+                        // 显示welcome username
+                        // 需要把json类型的字符串转换为json对象
+                        // "id:1,username:zhangsan,age:20,password:123456" --> {id:1, username : "zhangsan"}...
+                        var user=JSON.parse(data);
+                        //登录成功将登录的a标签清空
+                        $("#login_div").empty();
+                        //换成username
+                        $("#login_div").append("<h1>Welcome:"+user.username+"</h1>");
+                    }
+
+               }
+            });
+        });
+    </script>
+</head>
+<body>
+    <h1>This is Index Page</h1>
+    <!--
+        登录时要跳转到登录项目中，需要将当前页面地址传过去
+    -->
+    <div id="login_div">
+        <a id="turn_login_page" href="">登录</a>
+    </div>
+    <!--
+        购买手机时需要登录
+        没有登录的情况下需要先登录（跳转的登录项目中----拦截器）
+    -->
+        <a href="/buyIphone">购买手机</a>
+</body>
+</html>
